@@ -49,6 +49,7 @@ from frigate.stats import StatsEmitter, stats_init
 from frigate.storage import StorageMaintainer
 from frigate.timeline import TimelineProcessor
 from frigate.types import CameraMetricsTypes, FeatureMetricsTypes, PTZMetricsTypes
+from frigate.util.object import get_camera_regions_grid
 from frigate.version import VERSION
 from frigate.video import capture_camera, track_camera
 from frigate.watchdog import FrigateWatchdog
@@ -69,6 +70,7 @@ class FrigateApp:
         self.feature_metrics: dict[str, FeatureMetricsTypes] = {}
         self.ptz_metrics: dict[str, PTZMetricsTypes] = {}
         self.processes: dict[str, int] = {}
+        self.region_grids: dict[str, list[list[dict[str, any]]]] = {}
 
     def set_environment_vars(self) -> None:
         for key, value in self.config.environment_vars.items():
@@ -436,6 +438,10 @@ class FrigateApp:
         )
         self.detected_frames_processor.start()
 
+    def init_historical_regions(self) -> None:
+        for camera in self.config.cameras.values():
+            self.region_grids[camera.name] = get_camera_regions_grid(camera)
+
     def start_video_output_processor(self) -> None:
         output_processor = mp.Process(
             target=output_frames,
@@ -606,6 +612,7 @@ class FrigateApp:
             self.log_process.terminate()
             sys.exit(1)
         self.start_detectors()
+        self.init_historical_regions()
         self.start_video_output_processor()
         self.start_ptz_autotracker()
         self.start_detected_frames_processor()
