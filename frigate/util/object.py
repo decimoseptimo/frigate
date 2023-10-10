@@ -5,7 +5,7 @@ import numpy
 from frigate.config import CameraConfig
 from frigate.models import Event
 
-def get_camera_regions_grid(camera: CameraConfig, grid_size: int = 10) -> list[list[dict[str, any]]]:
+def get_camera_regions_grid(camera: CameraConfig, grid_size: int = 8) -> list[list[dict[str, any]]]:
     """Get a grid of expected region sizes for a camera."""
     events = Event.select(Event.data).where(Event.camera == camera.name).dicts()
 
