@@ -1,15 +1,19 @@
-"""Utils for reading and writing object detetion data."""
+"""Utils for reading and writing object detection data."""
 
+import logging
 import numpy
 
 from frigate.config import CameraConfig
 from frigate.models import Event
 
+logger = logging.getLogger(__name__)
+
+
 def get_camera_regions_grid(camera: CameraConfig, grid_size: int = 8) -> list[list[dict[str, any]]]:
     """Get a grid of expected region sizes for a camera."""
     events = Event.select(Event.data).where(Event.camera == camera.name).dicts()
 
-    print(f"There are {len(events)} events for {camera.name}")
+    logger.debug(f"There are {len(events)} events for {camera.name}")
     width = camera.detect.width
     height = camera.detect.height
 
@@ -24,7 +28,7 @@ def get_camera_regions_grid(camera: CameraConfig, grid_size: int = 8) -> list[li
             row.append({"sizes": []})
         grid.append(row)
 
-    print(f"The size of grid is {len(grid)} x {len(grid[grid_size - 1])}")
+    logger.debug(f"The size of grid is {len(grid)} x {len(grid[grid_size - 1])}")
     grid_coef = 1.0 / grid_size
 
     for d in data:
@@ -43,16 +47,14 @@ def get_camera_regions_grid(camera: CameraConfig, grid_size: int = 8) -> list[li
     for x in range(grid_size):
         for y in range(grid_size):
             cell = grid[x][y]
-            print(f"Printing stats for cell {x * grid_coef * width},{y * grid_coef * height} -> {(x + 1) * grid_coef * width},{(y + 1) * grid_coef * height}")
-            print(f"Found {len(cell['sizes'])} for this cell")
+            logger.debug(f"stats for cell {x * grid_coef * width},{y * grid_coef * height} -> {(x + 1) * grid_coef * width},{(y + 1) * grid_coef * height} :: {len(cell['sizes'])} objects")
 
             if len(cell["sizes"]) == 0:
-                print(f"Cell {x}, {y} has no boxes")
                 continue
 
             std_dev = numpy.std(cell["sizes"])
             mean = numpy.mean(cell["sizes"])
-            print(f"Std dev: {std_dev} Mean: {mean}")
+            logger.debug(f"std dev: {std_dev} mean: {mean}")
             cell["std_dev"] = std_dev
             cell["mean"] = mean
 
