@@ -5,8 +5,8 @@ import numpy
 from frigate.config import CameraConfig
 from frigate.models import Event
 
-def get_camera_regions_grid(camera: CameraConfig) -> list[list[dict[str, any]]]:
-    """Get a 5x5 grid of expected region sizes for a camera."""
+def get_camera_regions_grid(camera: CameraConfig, grid_size: int = 10) -> list[list[dict[str, any]]]:
+    """Get a grid of expected region sizes for a camera."""
     events = Event.select(Event.data).where(Event.camera == camera.name).dicts()
 
     print(f"There are {len(events)} events for {camera.name}")
@@ -16,15 +16,16 @@ def get_camera_regions_grid(camera: CameraConfig) -> list[list[dict[str, any]]]:
     all_data = [e["data"] for e in events]
     data = filter(lambda i: len(i) > 0, all_data)
 
-    # create 5x5 grid
+    # create a grid
     grid = []
-    for x in range(5):
+    for x in range(grid_size):
         row = []
-        for y in range(5):
+        for y in range(grid_size):
             row.append({"sizes": []})
         grid.append(row)
 
-    print(f"The size of grid is {len(grid)} x {len(grid[4])}")
+    print(f"The size of grid is {len(grid)} x {len(grid[grid_size - 1])}")
+    grid_coef = 1.0 / grid_size
 
     for d in data:
         if d.get("type") != "object":
@@ -35,16 +36,14 @@ def get_camera_regions_grid(camera: CameraConfig) -> list[list[dict[str, any]]]:
         # calculate centroid position
         x = box[0] + (box[2] / 2)
         y = box[1] + box[3]
-        x_pos = int(x * 5)
-        y_pos = int(y * 5)
+        x_pos = int(x * grid_size)
+        y_pos = int(y * grid_size)
         grid[x_pos][y_pos]["sizes"].append(d["region"][2] * width)
 
-    print(f"The grid is {grid}")
-
-    for x in range(5):
-        for y in range(5):
+    for x in range(grid_size):
+        for y in range(grid_size):
             cell = grid[x][y]
-            print(f"Printing stats for cell {x * 0.2 * width},{y * 0.2 * height} -> {(x + 1) * 0.2 * width},{(y + 1) * 0.2 * height}")
+            print(f"Printing stats for cell {x * grid_coef * width},{y * grid_coef * height} -> {(x + 1) * grid_coef * width},{(y + 1) * grid_coef * height}")
             print(f"Found {len(cell['sizes'])} for this cell")
 
             if len(cell["sizes"]) == 0:
