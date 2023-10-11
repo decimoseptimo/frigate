@@ -1,6 +1,7 @@
 """Utils for reading and writing object detection data."""
 
 import logging
+
 import numpy
 
 from frigate.config import CameraConfig
@@ -9,7 +10,9 @@ from frigate.models import Event
 logger = logging.getLogger(__name__)
 
 
-def get_camera_regions_grid(camera: CameraConfig, grid_size: int = 8) -> list[list[dict[str, any]]]:
+def get_camera_regions_grid(
+    camera: CameraConfig, grid_size: int = 8
+) -> list[list[dict[str, any]]]:
     """Get a grid of expected region sizes for a camera."""
     events = Event.select(Event.data).where(Event.camera == camera.name).dicts()
 
@@ -37,9 +40,15 @@ def get_camera_regions_grid(camera: CameraConfig, grid_size: int = 8) -> list[li
 
         box = d["box"]
 
-        # calculate centroid position
+        # calculate centroid position of region
         x = box[0] + (box[2] / 2)
-        y = box[1] + box[3]
+        y = box[1] + (box[3] / 2)
+
+        # handle regions that were letterboxed
+        if y > 1.0:
+            y = 0.5
+
+        # calculate position in grid based on centroid
         x_pos = int(x * grid_size)
         y_pos = int(y * grid_size)
         grid[x_pos][y_pos]["sizes"].append(d["region"][2] * width)
@@ -47,7 +56,9 @@ def get_camera_regions_grid(camera: CameraConfig, grid_size: int = 8) -> list[li
     for x in range(grid_size):
         for y in range(grid_size):
             cell = grid[x][y]
-            logger.debug(f"stats for cell {x * grid_coef * width},{y * grid_coef * height} -> {(x + 1) * grid_coef * width},{(y + 1) * grid_coef * height} :: {len(cell['sizes'])} objects")
+            logger.debug(
+                f"stats for cell {x * grid_coef * width},{y * grid_coef * height} -> {(x + 1) * grid_coef * width},{(y + 1) * grid_coef * height} :: {len(cell['sizes'])} objects"
+            )
 
             if len(cell["sizes"]) == 0:
                 continue
@@ -58,4 +69,4 @@ def get_camera_regions_grid(camera: CameraConfig, grid_size: int = 8) -> list[li
             cell["std_dev"] = std_dev
             cell["mean"] = mean
 
-    # TODO need to handle filling in missing cells using existing cells
+    return grid

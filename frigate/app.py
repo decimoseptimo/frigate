@@ -438,10 +438,6 @@ class FrigateApp:
         )
         self.detected_frames_processor.start()
 
-    def init_historical_regions(self) -> None:
-        for camera in self.config.cameras.values():
-            self.region_grids[camera.name] = get_camera_regions_grid(camera)
-
     def start_video_output_processor(self) -> None:
         output_processor = mp.Process(
             target=output_frames,
@@ -455,6 +451,10 @@ class FrigateApp:
         self.output_processor = output_processor
         output_processor.start()
         logger.info(f"Output process started: {output_processor.pid}")
+
+    def init_historical_regions(self) -> None:
+        for camera in self.config.cameras.values():
+            self.region_grids[camera.name] = get_camera_regions_grid(camera)
 
     def start_camera_processors(self) -> None:
         for name, config in self.config.cameras.items():
@@ -475,6 +475,7 @@ class FrigateApp:
                     self.detected_frames_queue,
                     self.camera_metrics[name],
                     self.ptz_metrics[name],
+                    self.region_grids[name],
                 ),
             )
             camera_process.daemon = True

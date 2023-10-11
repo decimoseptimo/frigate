@@ -458,6 +458,7 @@ def track_camera(
     detected_objects_queue,
     process_info,
     ptz_metrics,
+    region_grid,
 ):
     stop_event = mp.Event()
 
@@ -516,6 +517,7 @@ def track_camera(
         motion_enabled,
         stop_event,
         ptz_metrics,
+        region_grid,
     )
 
     logger.info(f"{name}: exiting subprocess")
@@ -624,7 +626,9 @@ def get_cluster_boundary(box, min_region):
     ]
 
 
-def get_cluster_candidates(frame_shape, min_region, boxes):
+def get_cluster_candidates(
+    frame_shape, min_region, boxes, region_grid: list[list[dict[str, any]]]
+):
     # and create a cluster of other boxes using it's max region size
     # only include boxes where the region is an appropriate(except the region could possibly be smaller?)
     # size in the cluster. in order to be in the cluster, the furthest corner needs to be within x,y offset
@@ -741,6 +745,7 @@ def process_frames(
     motion_enabled: mp.Value,
     stop_event,
     ptz_metrics: PTZMetricsTypes,
+    region_grid: list[list[dict[str, any]]],
     exit_on_empty: bool = False,
 ):
     fps = process_info["process_fps"]
@@ -828,7 +833,7 @@ def process_frames(
             combined_boxes = motion_boxes + tracked_object_boxes
 
             cluster_candidates = get_cluster_candidates(
-                frame_shape, region_min_size, combined_boxes
+                frame_shape, region_min_size, combined_boxes, region_grid
             )
 
             regions = [
